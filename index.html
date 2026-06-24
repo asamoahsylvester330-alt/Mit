@@ -2,51 +2,56 @@ let pyodide = null;
 let pyReady = false;
 
 async function loadPy() {
+  const statusEl = document.getElementById('py-status');
+  const badgeEl = document.getElementById('py-badge');
+
   try {
-    document.getElementById('py-status').textContent =
-      'Loading Python environment...';
+    statusEl.textContent = 'Loading Python environment...';
 
     pyodide = await loadPyodide({
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/'
     });
 
-    document.getElementById('py-status').textContent =
-      'Loading pandas and openpyxl...';
+    statusEl.textContent = 'Loading core packages...';
 
-    await pyodide.loadPackage([
-      "numpy",
-      "pandas",
-      "openpyxl"
-    ]);
+    // Load core scientific packages
+    await pyodide.loadPackage(["numpy", "pandas"]);
 
+    statusEl.textContent = 'Installing Excel support (openpyxl)...';
+
+    // Install openpyxl properly via micropip
     await pyodide.runPythonAsync(`
-import pandas
-import openpyxl
-print("Packages loaded successfully")
+import micropip
+await micropip.install("openpyxl")
 `);
 
     pyReady = true;
 
-    document.getElementById('py-status').style.display = 'none';
+    // Update UI
+    statusEl.style.display = 'none';
 
-    document.getElementById('py-badge').textContent = 'Ready';
-    document.getElementById('py-badge').style.background =
-      'var(--green-bg)';
-    document.getElementById('py-badge').style.color =
-      'var(--green)';
-    document.getElementById('py-badge').style.borderColor =
-      'var(--green-border)';
+    badgeEl.textContent = 'Ready';
+    badgeEl.style.background = 'var(--green-bg)';
+    badgeEl.style.color = 'var(--green)';
+    badgeEl.style.borderColor = 'var(--green-border)';
 
-    checkReady();
+    if (typeof checkReady === "function") {
+      checkReady();
+    }
+
+    console.log("Pyodide fully ready ✔️");
 
   } catch (err) {
-    console.error(err);
+    console.error("Pyodide load error:", err);
 
-    document.getElementById('py-status').textContent =
-      'Python failed to load';
+    statusEl.textContent = 'Python failed to load';
 
-    document.getElementById('py-badge').textContent = 'Error';
+    badgeEl.textContent = 'Error';
+    badgeEl.style.background = 'var(--red-bg)';
+    badgeEl.style.color = 'var(--red)';
+    badgeEl.style.borderColor = 'var(--red-border)';
   }
 }
 
+// Start loading immediately
 loadPy();
