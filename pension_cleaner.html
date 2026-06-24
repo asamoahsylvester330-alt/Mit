@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pension Report Cleaner</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface2: #f1f0ee;
+    --border: #e2e1de;
+    --border2: #cdccc8;
+    --text: #1a1a18;
+    --text2: #5a5a57;
+    --text3: #9a9a96;
+    --green: #2d7a4f;
+    --green-bg: #eaf4ef;
+    --green-border: #b6dcc7;
+    --amber: #a05c00;
+    --amber-bg: #fef3e2;
+    --amber-border: #f5d08a;
+    --red: #b83232;
+    --red-bg: #fdf0f0;
+    --red-border: #f0b8b8;
+    --blue: #1a5fa8;
+    --blue-bg: #eaf1fb;
+    --blue-border: #b0ccee;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --mono: 'Courier New', monospace;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .logo-icon {
+    width: 30px;
+    height: 30px;
+    background: var(--green);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid var(--green-border);
+    font-weight: 500;
+  }
+
+  main {
+    flex: 1;
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .intro h2 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .intro p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .drop-zone {
+    background: var(--surface);
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 1.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .drop-zone:hover, .drop-zone.over { border-color: var(--green); background: var(--green-bg); }
+  .drop-zone.loaded { border-style: solid; border-color: var(--green); background: var(--green-bg); }
+
+  .dz-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .drop-zone.loaded .dz-icon { background: var(--green); }
+  .dz-icon svg { width: 20px; height: 20px; fill: none; stroke: var(--text2); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .drop-zone.loaded .dz-icon svg { stroke: #fff; }
+
+  .dz-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .dz-sub { font-size: 12px; color: var(--text3); }
+  .dz-file { font-size: 11.5px; color: var(--green); font-family: var(--mono); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-header svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  #log-box {
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text2);
+    min-height: 120px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fafaf9;
+  }
+
+  .log-ok { color: var(--green); }
+  .log-warn { color: var(--amber); }
+  .log-err { color: var(--red); }
+
+  #pb-wrap {
+    height: 3px;
+    background: var(--border);
+  }
+  #pb { height: 100%; width: 0%; background: var(--green); transition: width 0.35s ease; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .metric {
+    padding: 14px 16px;
+    border-right: 1px solid var(--border);
+  }
+  .metric:last-child { border-right: none; }
+  .metric .val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .metric .lbl { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.4; }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn-primary {
+    flex: 1;
+    padding: 11px 16px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .btn-secondary {
+    flex: 1;
+    padding: 11px 16px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-secondary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .btn-icon {
+    padding: 11px 13px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .btn-icon:hover { background: var(--surface2); }
+  .btn-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .info-bar {
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--blue);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+  }
+  .info-bar svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 1px; }
+
+  #py-status {
+    font-size: 12px;
+    color: var(--text3);
+    text-align: center;
+    padding: 6px;
+  }
+
+  .steps {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .step {
+    flex: 1;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-right: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text3);
+  }
+  .step:last-child { border-right: none; }
+  .step.active { color: var(--text); }
+  .step.done { color: var(--green); }
+
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+    color: var(--text3);
+  }
+  .step.active .step-num { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+  .step.done .step-num { border-color: var(--green); background: var(--green); color: #fff; }
+
+  .step-text { font-size: 12px; line-height: 1.3; }
+  .step-text strong { display: block; font-weight: 600; font-size: 12.5px; }
+
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 12px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  input[type=file] { display: none; }
+
+  @media (max-width: 600px) {
+    .upload-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .metric { border-bottom: 1px solid var(--border); border-right: none; }
+    .metric:nth-child(odd) { border-right: 1px solid var(--border); }
+    .steps { flex-direction: column; }
+    .step { border-right: none; border-bottom: 1px solid var(--border); }
+    .step:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    </div>
+    Pension Report Cleaner
+  </div>
+  <span class="badge" id="py-badge">Loading…</span>
+</header>
+
+<main>
+  <div class="intro">
+    <h2>Monthly report processor</h2>
+    <p>Upload the two Excel files below each month. Names will be looked up from the bio data, the report will be cleaned, and you can download the result.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step active" id="st1">
+      <div class="step-num" id="sn1">1</div>
+      <div class="step-text"><strong>Upload files</strong>Main report + bio data</div>
+    </div>
+    <div class="step" id="st2">
+      <div class="step-num" id="sn2">2</div>
+      <div class="step-text"><strong>Match names</strong>VLOOKUP by Employee No.</div>
+    </div>
+    <div class="step" id="st3">
+      <div class="step-num" id="sn3">3</div>
+      <div class="step-text"><strong>Clean data</strong>Remove, fill &amp; format</div>
+    </div>
+    <div class="step" id="st4">
+      <div class="step-num" id="sn4">4</div>
+      <div class="step-text"><strong>Download</strong>Clean report + audit</div>
+    </div>
+  </div>
+
+  <div class="upload-grid">
+    <div class="drop-zone" id="dz-main" onclick="document.getElementById('fi-main').click()"
+      ondragover="dzEv(event,'main','over')" ondragleave="dzEv(event,'main','leave')" ondrop="dzEv(event,'main','drop')">
+      <div class="dz-icon">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>
+      </div>
+      <div class="dz-title">Main pension report</div>
+      <div class="dz-sub" id="dz-main-sub">Drop here or click to browse · .xlsx</div>
+    </div>
+    <div class="drop-zone" id="dz-bio" onclick="document.getElementById('fi-bio').click()"
+      ondragover="dzEv(event,'bio','over')" ondragleave="dzEv(event,'bio','leave')" ondrop="dzEv(event,'bio','drop')">
+      <div class="dz-icon">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="dz-title">Bio data file</div>
+      <div class="dz-sub" id="dz-bio-sub">Drop here or click to browse · .xlsx</div>
+    </div>
+  </div>
+  <input type="file" id="fi-main" accept=".xlsx" onchange="onFile('main',this.files[0])">
+  <input type="file" id="fi-bio" accept=".xlsx" onchange="onFile('bio',this.files[0])">
+
+  <div class="card">
+    <div class="card-header">
+      <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Processing log
+    </div>
+    <div id="pb-wrap"><div id="pb"></div></div>
+    <div id="log-box"><span style="color:#9a9a96">Upload both files and click Process to begin…</span></div>
+    <div id="metrics-wrap" style="display:none; border-top: 1px solid var(--border);">
+      <div class="metrics-grid">
+        <div class="metric"><div class="val" id="m-orig">—</div><div class="lbl">Original rows</div></div>
+        <div class="metric"><div class="val" id="m-matched">—</div><div class="lbl">Names matched</div></div>
+        <div class="metric"><div class="val" id="m-removed">—</div><div class="lbl">Rows removed</div></div>
+        <div class="metric"><div class="val" id="m-final">—</div><div class="lbl">Final rows</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="btn-process" disabled onclick="runProcess()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Process files
+    </button>
+    <button class="btn-secondary" id="btn-download" onclick="doDownload()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download clean report
+    </button>
+    <button class="btn-icon" onclick="resetAll()" title="Reset">
+      <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+    </button>
+  </div>
+
+  <div class="info-bar">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    All processing happens entirely in your browser. No data is uploaded to any server — your files stay on your computer.
+  </div>
+
+  <div id="py-status">Loading Python environment — this takes about 10–15 seconds on first load…</div>
+</main>
+
+<footer>
+  Pension Report Cleaner &nbsp;·&nbsp; Processes locally in your browser &nbsp;·&nbsp; No data leaves your computer
+</footer>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
+<script>
+let pyodide=null, mainData=null, bioData=null, resultBytes=null, mainName='';
+
+async function loadPy(){
+  try{
+    pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/' });
+    await pyodide.loadPackage(['pandas','openpyxl']);
+    document.getElementById('py-status').style.display = 'none';
+    document.getElementById('py-badge').textContent = 'Ready';
+    document.getElementById('py-badge').style.background = 'var(--green-bg)';
+    document.getElementById('py-badge').style.color = 'var(--green)';
+    document.getElementById('py-badge').style.borderColor = 'var(--green-border)';
+    checkReady();
+  } catch(e){
+    document.getElementById('py-status').textContent = 'Failed to load Python environment — please refresh the page.';
+    document.getElementById('py-badge').textContent = 'Error';
+  }
+}
+loadPy();
+
+function dzEv(e, which, action){
+  e.preventDefault();
+  const el = document.getElementById('dz-'+which);
+  if(action==='over') el.classList.add('over');
+  else if(action==='leave') el.classList.remove('over');
+  else { el.classList.remove('over'); onFile(which, e.dataTransfer.files[0]); }
+}
+
+function onFile(which, f){
+  if(!f || !f.name.endsWith('.xlsx')){ log('Please upload a .xlsx file','err'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    const bytes = new Uint8Array(e.target.result);
+    const el = document.getElementById('dz-'+which);
+    const sub = document.getElementById('dz-'+which+'-sub');
+    el.classList.add('loaded');
+    sub.className = 'dz-file';
+    sub.textContent = f.name;
+    if(which==='main'){ mainData=bytes; mainName=f.name; }
+    else bioData=bytes;
+    checkReady();
+  };
+  r.readAsArrayBuffer(f);
+}
+
+function checkReady(){
+  document.getElementById('btn-process').disabled = !(mainData && bioData && pyodide);
+  if(mainData && bioData) setStep(2);
+}
+
+function log(msg, cls=''){
+  const b = document.getElementById('log-box');
+  if(b.querySelector('span[style]')) b.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = cls ? 'log-'+cls : '';
+  d.textContent = '› ' + msg;
+  b.appendChild(d);
+  b.scrollTop = b.scrollHeight;
+}
+
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const st = document.getElementById('st'+i);
+    const sn = document.getElementById('sn'+i);
+    st.className = 'step' + (i<n?' done':i===n?' active':'');
+    sn.textContent = i;
+    if(i<n) sn.innerHTML = '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+}
+
+function pb(p){ document.getElementById('pb').style.width = p+'%'; }
+
+async function runProcess(){
+  if(!pyodide||!mainData||!bioData) return;
+  const btn = document.getElementById('btn-process');
+  btn.disabled = true;
+  resultBytes = null;
+  document.getElementById('btn-download').style.display = 'none';
+  document.getElementById('metrics-wrap').style.display = 'none';
+  document.getElementById('log-box').innerHTML = '';
+  pb(0);
+
+  pyodide.globals.set('main_bytes', mainData);
+  pyodide.globals.set('bio_bytes', bioData);
+
+  const code = `
+import pandas as pd
+import io
+from pandas.tseries.offsets import MonthEnd
+import js
+
+def log(msg, cls=''): js.log(msg, cls)
+
+BAD_WORDS = ["UNKNOWN","DUMMY","SUSPENSE","OVERPAYMENT","UNDERPAYMENT","MEMBER"]
+
+log("Reading main report…")
+df = pd.read_excel(io.BytesIO(bytes(main_bytes)), engine='openpyxl')
+df.columns = df.columns.str.strip()
+original_rows = len(df)
+log(f"Loaded {original_rows:,} rows, {len(df.columns)} columns")
+
+log("Reading bio data…")
+bio = pd.read_excel(io.BytesIO(bytes(bio_bytes)), engine='openpyxl')
+bio.columns = bio.columns.str.strip()
+log(f"Bio data: {len(bio):,} member records")
+
+log("Matching names — Employee_Number ↔ MEMBER NO…")
+bio['MEMBER NO'] = bio['MEMBER NO'].astype(str).str.strip()
+df['Employee_Number'] = df['Employee_Number'].astype(str).str.strip()
+bio_map = bio.set_index('MEMBER NO')['FULL NAME'].to_dict()
+
+matched, unmatched = 0, 0
+first_names, last_names, other_names = [], [], []
+
+for emp in df['Employee_Number']:
+    full = bio_map.get(emp, '')
+    if full and str(full).strip() not in ('', 'nan'):
+        parts = str(full).strip().split()
+        first_names.append(parts[0] if len(parts) > 0 else '')
+        last_names.append(parts[1] if len(parts) > 1 else '')
+        other_names.append(' '.join(parts[2:]) if len(parts) > 2 else '')
+        matched += 1
+    else:
+        first_names.append('')
+        last_names.append('')
+        other_names.append('')
+        unmatched += 1
+
+df['First_Name'] = first_names
+df['Last_Name'] = last_names
+df['Other_Name'] = other_names
+
+if unmatched == 0:
+    log(f"All {matched:,} names matched successfully", 'ok')
+else:
+    log(f"Matched {matched:,} names — {unmatched:,} could not be found in bio data", 'warn')
+
+log("Removing blank ReportCode rows…")
+before = len(df)
+df = df[df['ReportCode'].notna() & (df['ReportCode'].astype(str).str.strip() != '') & (df['ReportCode'].astype(str).str.strip() != 'REPORTCODE')]
+removed_rc = before - len(df)
+log(f"Removed {removed_rc:,} blank ReportCode rows")
+
+log("Removing keyword rows (UNKNOWN, DUMMY, SUSPENSE…)…")
+row_text = df.astype(str).apply(lambda x: x.str.upper()).agg(' '.join, axis=1)
+kw_mask = row_text.str.contains('|'.join(BAD_WORDS), na=False)
+removed_kw = int(kw_mask.sum())
+df = df[~kw_mask]
+log(f"Removed {removed_kw:,} keyword rows")
+
+log("Removing zero or invalid benefit rows…")
+cc = 'Accumulated contributions at the end of current month'
+bc = 'Accrued Benefits at the end of current month'
+df[cc] = pd.to_numeric(df[cc], errors='coerce')
+df[bc] = pd.to_numeric(df[bc], errors='coerce')
+before = len(df)
+df = df[(df[cc] > 0) & (df[bc] > 0)]
+removed_b = before - len(df)
+log(f"Removed {removed_b:,} zero or invalid benefit rows")
+
+log("Filling missing Ghana Card numbers…")
+gcc = 'Ghana_Card_Number'
+ghana_filled = int(df[gcc].isna().sum())
+df[gcc] = df[gcc].fillna('00')
+df.loc[df[gcc].astype(str).str.strip() == '', gcc] = '00'
+log(f"Filled {ghana_filled:,} missing Ghana Card numbers with 00")
+
+log("Filling missing dates of birth…")
+dob_col = 'Date_Of_Birth'
+dob_filled = int(df[dob_col].isna().sum())
+df[dob_col] = pd.to_datetime(df[dob_col], errors='coerce').fillna(pd.Timestamp('1998-01-01'))
+log(f"Filled {dob_filled:,} missing DOB values with 01/01/1998")
+
+last_day = pd.Timestamp.today().replace(day=1) - MonthEnd(1)
+date_cols = ['Contributions_Allocation_Date','Contributions_Receipt_Date','Contrib Period','Original_Date_Earned']
+for col in date_cols:
+    if col in df.columns:
+        df[col] = pd.to_datetime(df[col], errors='coerce').fillna(last_day)
+log(f"Filled blank contribution dates → {last_day.strftime('%d %b %Y')}", 'ok')
+
+total_removed = original_rows - len(df)
+log(f"Done — {len(df):,} clean rows ready to download", 'ok')
+
+audit = pd.DataFrame({
+    'Metric': ['Original Rows','Names Matched','Names Unmatched','Removed — Blank ReportCode','Removed — Keywords','Removed — Invalid Benefits','Filled — Ghana Card','Filled — Date of Birth','Final Rows'],
+    'Count':  [original_rows, matched, unmatched, removed_rc, removed_kw, removed_b, ghana_filled, dob_filled, len(df)]
+})
+
+out = io.BytesIO()
+with pd.ExcelWriter(out, engine='openpyxl') as w:
+    df.to_excel(w, sheet_name='Clean_Report', index=False)
+    audit.to_excel(w, sheet_name='Audit_Report', index=False)
+
+{'orig': original_rows, 'matched': matched, 'removed': total_removed, 'final': len(df), 'bytes': list(out.getvalue())}
+`;
+
+  try {
+    setStep(2); pb(10);
+    const res = await pyodide.runPythonAsync(code);
+    pb(95);
+    const info = res.toJs({ dict_converter: Object.fromEntries });
+    resultBytes = new Uint8Array(info.bytes);
+    document.getElementById('m-orig').textContent = info.orig.toLocaleString();
+    document.getElementById('m-matched').textContent = info.matched.toLocaleString();
+    document.getElementById('m-removed').textContent = info.removed.toLocaleString();
+    document.getElementById('m-final').textContent = info.final.toLocaleString();
+    document.getElementById('metrics-wrap').style.display = 'block';
+    document.getElementById('btn-download').style.display = 'flex';
+    btn.style.display = 'none';
+    setStep(4); pb(100);
+  } catch(e) {
+    log('Error: ' + e.message, 'err');
+    btn.disabled = false; pb(0);
+  }
+}
+
+function doDownload(){
+  if(!resultBytes) return;
+  const blob = new Blob([resultBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const base = mainName.replace(/\.xlsx$/i, '');
+  const now = new Date();
+  const stamp = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
+  a.download = base + '_cleaned_' + stamp + '.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+  log('File downloaded successfully ✓', 'ok');
+}
+
+function resetAll(){
+  mainData=null; bioData=null; resultBytes=null; mainName='';
+  ['main','bio'].forEach(w => {
+    const el = document.getElementById('dz-'+w);
+    el.classList.remove('loaded','over');
+    const sub = document.getElementById('dz-'+w+'-sub');
+    sub.className = 'dz-sub';
+    sub.textContent = w==='main' ? 'Drop here or click to browse · .xlsx' : 'Drop here or click to browse · .xlsx';
+    document.getElementById('fi-'+w).value = '';
+  });
+  document.getElementById('log-box').innerHTML = '<span style="color:#9a9a96">Upload both files and click Process to begin…</span>';
+  document.getElementById('metrics-wrap').style.display = 'none';
+  document.getElementById('btn-download').style.display = 'none';
+  document.getElementById('btn-process').style.display = 'flex';
+  document.getElementById('btn-process').disabled = true;
+  document.getElementById('pb').style.width = '0%';
+  setStep(1);
+}
+</script>
+</body>
+</html>
