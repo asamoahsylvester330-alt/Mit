@@ -14,14 +14,14 @@ async function loadPy() {
 
     statusEl.textContent = 'Loading core packages...';
 
-    // Load core scientific packages
     await pyodide.loadPackage(["numpy", "pandas"]);
 
-    statusEl.textContent = 'Installing Excel support (openpyxl)...';
+    statusEl.textContent = 'Preparing pip environment...';
 
-    // Install openpyxl properly via micropip
+    // ✅ SAFE micropip setup (important fix)
     await pyodide.runPythonAsync(`
 import micropip
+await micropip.ensure_pip()
 await micropip.install("openpyxl")
 `);
 
@@ -53,5 +53,4 @@ await micropip.install("openpyxl")
   }
 }
 
-// Start loading immediately
 loadPy();
