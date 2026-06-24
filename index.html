@@ -441,7 +441,11 @@ let pyodide=null, mainData=null, bioData=null, resultBytes=null, mainName='';
 async function loadPy(){
   try{
     pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/' });
-    await pyodide.loadPackage(['micropip','pandas','openpyxl']);
+    document.getElementById('py-status').textContent = 'Installing packages (first load may take 30s)…';
+    await pyodide.loadPackage(['micropip']);
+    const micropip = pyodide.pyimport('micropip');
+    await micropip.install('pandas');
+    await micropip.install('openpyxl');
     document.getElementById('py-status').style.display = 'none';
     document.getElementById('py-badge').textContent = 'Ready';
     document.getElementById('py-badge').style.background = 'var(--green-bg)';
@@ -521,8 +525,6 @@ async function runProcess(){
   pyodide.globals.set('bio_bytes', bioData);
 
   const code = `
-import micropip
-await micropip.install(['pandas','openpyxl'])
 import pandas as pd
 import io
 from pandas.tseries.offsets import MonthEnd
