@@ -255,8 +255,21 @@ function fmtDate(d) {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// Handles both JS date strings AND Excel serial numbers
 function parseAnyDate(v) {
   if (!v || String(v).trim() === '') return null;
+
+  // Excel serial number (e.g. 46170) — numbers only
+  const num = Number(v);
+  if (!isNaN(num) && num > 1000 && num < 100000) {
+    // Excel epoch: Dec 30 1899
+    const excelEpoch = new Date(1899, 11, 30);
+    const d = new Date(excelEpoch.getTime() + num * 86400000);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Normal date string
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -264,8 +277,8 @@ function parseAnyDate(v) {
 function fmtDate(d) {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  const yy = String(d.getFullYear());
-  return `${mm}/${dd}/${yy}`;
+  const yyyy = String(d.getFullYear());
+  return `${mm}/${dd}/${yyyy}`;
 }
 
 // ─── Main processing ─────────────────────────────────────────────────────────
@@ -396,11 +409,12 @@ function runProcess() {
     let invalid = false;
 
     if (!dob) {
+      // Empty — fill with default
       invalid = true;
     } else {
-      const age = (uploadDate - dob) / (365.25 * 24 * 60 * 60 * 1000);
-      const year = dob.getFullYear();
-      if (age > 55 || year >= 2007) invalid = true;
+      const ageYears = (uploadDate - dob) / (365.25 * 24 * 60 * 60 * 1000);
+      // Replace if older than 55 OR younger than 18
+      if (ageYears > 55 || ageYears < 18) invalid = true;
     }
 
     if (invalid) {
@@ -411,7 +425,7 @@ function runProcess() {
     }
   }
 
-  log(`Fixed ${dobFixed.toLocaleString()} Date of Birth values`);
+  log(`Fixed ${dobFixed.toLocaleString()} Date of Birth values (empty / >55yrs / <18yrs)`);
   pb(70);
 
   // ── CONTRIBUTION DATES ────────────────────────────────────────────────────
@@ -432,12 +446,19 @@ function runProcess() {
 
   for (const col of dateCols) {
     for (const r of rows) {
-      const d = parseAnyDate(r[col]);
-      r[col] = d ? fmtDate(d) : fallback;
+      const raw = r[col];
+      // Skip if already looks like a proper formatted date
+      const str = String(raw || '').trim();
+      if (!str || str === '' || str === 'undefined') {
+        r[col] = fallback;
+      } else {
+        const d = parseAnyDate(raw);
+        r[col] = d ? fmtDate(d) : fallback;
+      }
     }
   }
 
-  log(`Filled blank dates → ${fallback}`, 'ok');
+  log(`Filled/formatted contribution dates → fallback: ${fallback}`, 'ok');
   pb(85);
 
   // ── OUTPUT FILE ───────────────────────────────────────────────────────────
