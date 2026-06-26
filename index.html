@@ -381,13 +381,16 @@ function runProcess() {
   pb(50);
 
   // ── GHANA CARD ────────────────────────────────────────────────────────────
-  log('Cleaning Ghana Card numbers…');
+  log('Validating Ghana Card numbers…');
+
+  // Valid format: XXX-XXXXXXXXX-X (3 chars, dash, 9 chars, dash, 1 char)
+  const ghanaCardRegex = /^[A-Z0-9]{3}-[A-Z0-9]{9}-[A-Z0-9]{1}$/i;
 
   let ghanaFixed = 0;
 
   for (const r of rows) {
     const v = String(r['Ghana_Card_Number'] || '').trim();
-    if (!v || v === '0' || v.toLowerCase() === 'undefined') {
+    if (!v || v === '0' || v.toLowerCase() === 'undefined' || !ghanaCardRegex.test(v)) {
       r['Ghana_Card_Number'] = '00';
       ghanaFixed++;
     } else {
@@ -395,7 +398,7 @@ function runProcess() {
     }
   }
 
-  log(`Fixed ${ghanaFixed.toLocaleString()} missing Ghana Card numbers`);
+  log(`Fixed ${ghanaFixed.toLocaleString()} invalid/missing Ghana Card numbers (must be XXX-XXXXXXXXX-X)`);
   pb(58);
 
   // ── DOB RULE ENGINE ───────────────────────────────────────────────────────
